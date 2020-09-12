@@ -2,7 +2,7 @@ let canvas = document.querySelector("#mycanvas");
 let ctx = canvas.getContext("2d");
 
 function getRandFloat(min, max){
-    return Math.floor(Math.random() * (max - 100) + min) / 100;
+    return Math.random() * (max - min) + min;
 } 
 
 class Root {
@@ -12,7 +12,7 @@ class Root {
         this.large = 1;
         this.medium = 0.6;
         this.small = 0.1;
-        this.deadBranchDepth = 3;
+        this.deadBranchDepth = 2;
         this.lines = [new Line(this, 100, 500, 150, 490, 1)];
     }
 
@@ -37,12 +37,16 @@ class Line {
         this.x2 = x2;
         this.y2 = y2;
         this.branchDepth = branchDepth;
+        this.dead = false;
         this.angle = Math.atan2(this.y2 - this.y, this.x2 - this.x);
+        console.log(`Starting angle is ${this.angle}, spread is ${this.root.angleSpread}`);
         this.length = Math.sqrt((this.x2 - this.x)*(this.x2 - this.x) + (this.y2 - this.y)*(this.y2 - this.y));
     }
 
     birth() {
-        if (this.branchDepth >= this.root.deadBranchDepth) {
+        console.log("Branch");
+        if (this.dead) {
+            console.log("Abortion");
             return [];
         }
         let seed = Math.random();
@@ -50,32 +54,55 @@ class Line {
         //60% chance to grow large branch
         //40% chance to grow small branch
         //20% chance to grow medium branch
-        let angle = getRandFloat(this.angle - this.root.angleSpread/2, this.angle + this.root.angleSpread/2);
+        
         if (seed < 0.6) {
-            let length = this.length * this.root.large;
-            let x2 = this.x2 + Math.cos(angle) * length;
-            let y2 = this.y2 + Math.sin(angle) * length;
-            offsprings.push(new Line(this.root, this.x2, this.y2, x2, y2, 1));
+            console.log("large");
+            offsprings.push(this.createBranch(2));
+            this.dead = true;
         }
 
         if (seed < 0.1) {
-            let length = this.length * this.root.small;
-            let x2 = this.x2 + Math.cos(angle) * length;
-            let y2 = this.y2 + Math.sin(angle) * length;
-            offsprings.push(new Line(this.root, this.x2, this.y2, x2, y2, 2));
+            offsprings.push(this.createBranch(0));
         }
 
         if (seed < 0.05) {
-            let length = this.length * this.root.medium;
-            let x2 = this.x2 + Math.cos(angle) * length;
-            let y2 = this.y2 + Math.sin(angle) * length;
-            offsprings.push(new Line(this.root, this.x2, this.y2, x2, y2, 3));
+            this.dead = true;
+            offsprings.push(this.createBranch(1));
         }
 
         return offsprings;
     }
 
+    createBranch(size){
+        //size: 2 for large, 1 for medium, 0 for small
+        let ratio;
+        let angleSpread;
+        if (size == 0){
+            ratio = this.root.small;
+            angleSpread = this.root.angleSpread.small;
+        } else if (size == 1){
+            ratio = this.root.medium;
+            angleSpread = this.root.angleSpread.small;
+        } else if (size == 2){
+            ratio = this.root.large;
+            angleSpread = this.root.angleSpread.small;
+        } else {
+            console.error("Error with size " + size);
+            return;
+        }
+        let angle = getRandFloat(this.angle - angleSpread/2, this.angle + angleSpread/2);
+        let length = this.length * ratio;
+        let x2 = this.x2 + Math.cos(angle) * length;
+        let y2 = this.y2 + Math.sin(angle) * length;
+        return new Line(this.root, this.x2, this.y2, x2, y2, size)
+    }
+
     render(){
+        if (this.dead) {
+            ctx.strokeStyle = "red";
+        } else {
+            ctx.strokeStyle = "black";
+        }
         ctx.beginPath();
         ctx.moveTo(this.x, this.y);
         ctx.lineTo(this.x2, this.y2);
@@ -83,7 +110,12 @@ class Line {
     }
 }
 
-let root = new Root(2*Math.PI, 0.1);
+let root = new Root({
+    small: 2 * Math.PI,
+    medium: Math.PI,
+    large: Math.PI / 4
+}, 0.1);
+
 canvas.addEventListener('click', () => {
     console.log("click");
     root.step();
@@ -110,6 +142,10 @@ function gameLoop() {
     update();
     render();
 
+}
+
+for (let i = 0; i < 10; i++) {
+    console.log(getRandFloat(-0.197 - 6.28/2, -0.197 + 6.28/2));
 }
 
 
