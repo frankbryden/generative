@@ -110,6 +110,99 @@ class Line {
     }
 }
 
+class Tracer {
+    constructor(ball, bufferSize, sampling) {
+        this.ball = ball;
+        this.bufferSize = bufferSize;
+        this.buffer = [];
+        this.samplingRate = sampling;
+        this.sampleCount = 0;
+    }
+
+    update() {
+        this.sampleCount++;
+        if (this.sampleCount >= this.samplingRate) {
+            this.sampleCount = 0;
+            this.takeSample();
+        }
+    }
+
+    takeSample() {
+        this.buffer.push({x: this.ball.x, y: this.ball.y});
+        if (this.buffer.length >= this.bufferSize) {
+            this.buffer.shift();
+        }
+    }
+
+    render() {
+        for (let i = 1; i < this.buffer.length; i++) {
+            ctx.beginPath();
+            let prevPoint = this.buffer[i - 1];
+            let currPoint = this.buffer[i];
+            ctx.moveTo(prevPoint.x, prevPoint.y);
+            ctx.lineTo(currPoint.x, currPoint.y);
+            ctx.stroke();
+        }
+        /*
+        this.buffer.forEach(point => {
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 5, 0, 2*Math.PI);
+            ctx.fillStyle = "red";
+            ctx.fill();
+        });*/
+    }
+
+    
+}
+
+class GravBall {
+    constructor(x, y, vel) {
+        this.x = x;
+        this.y = y;
+        this.vel = vel;
+        this.dir = {x: this.vel.x > 0 ? -1 : 1, y: this.vel.y > 0 ? -1 : 1};
+    }
+
+    accelFuncWidth(x) {
+        return Math.max(-1*(x-2)*(x-3)*(x-canvas.clientWidth - 1)*(x-canvas.clientWidth)/10000000000+10, 0);
+    }
+
+    accelFuncHeight(y) {
+        return Math.max(-1*(y+2)*(y+3)*(y-canvas.clientHeight+50 - 1)*(y-canvas.clientHeight+50)/10000000000+10, 0);
+    }
+
+    update() {
+        this.vel.x += this.accelFuncWidth(this.x)*this.dir.x/10;
+        this.vel.y += this.accelFuncHeight(this.y)*this.dir.y/10;
+        this.x += this.vel.x;
+        this.y += this.vel.y;
+
+        if (this.x > canvas.clientWidth/2 && this.dir.x == 1){
+            this.dir.x = -1;
+        }
+
+        if (this.x < canvas.clientWidth/2 && this.dir.x == -1){
+            this.dir.x = 1;
+        }
+
+        if (this.y > canvas.clientHeight/2 && this.dir.y == 1){
+            this.dir.y = -1;
+        }
+
+        if (this.y < canvas.clientHeight/2 && this.dir.y == -1){
+            this.dir.y = 1;
+        }
+    }
+
+    render() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 10, 0, 2*Math.PI);
+
+        ctx.fillStyle = "cyan";
+        ctx.fill();
+    }
+}
+
 let root = new Root({
     small: 2 * Math.PI,
     medium: Math.PI,
@@ -121,6 +214,12 @@ canvas.addEventListener('click', () => {
     root.step();
 });
 
+let ball = new GravBall(100, 200, {x: -1, y: -6.2});
+let tracer = new Tracer(ball, 100, 5);
+
+let ball2 = new GravBall(200, 100, {x: 1, y: 9.2});
+let tracer2 = new Tracer(ball2, 100, 5);
+
 function render() {
     ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
@@ -128,25 +227,30 @@ function render() {
     ctx.fillStyle = "white";//"#edd5a1";
     ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
-    root.render();
+    ctx.strokeRect(2, 2, canvas.clientWidth - 2, canvas.clientHeight - 2);
+
+    tracer.render();
+    ball.render();
+
+    tracer2.render();
+    ball2.render();
 }
 
 function update() {
+    ball.update();
+    tracer.update();
 
-
+    ball2.update();
+    tracer2.update();
 }
 
 function gameLoop() {
     requestAnimationFrame(gameLoop);
+    //setTimeout(gameLoop, 100);
 
     update();
     render();
 
 }
-
-for (let i = 0; i < 10; i++) {
-    console.log(getRandFloat(-0.197 - 6.28/2, -0.197 + 6.28/2));
-}
-
 
 gameLoop();
